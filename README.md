@@ -146,24 +146,14 @@ Example:
 
 ## Sample Output
 
-### Division Timetable
+### Generated Timetable
 
-```text
-╔══ Division D — Timetable ══╗
-
-Mon   DS     CN     DECA   Break   DS Lab   DS Lab   OE
-Tue   CN     DM     UHV    Break   CN Lab   CN Lab   DS
-...
-```
+![Timetable](assets/timetable-output.png)
 
 ### Faculty Summary
 
-```text
-Name                Subject     Required   Placed   Status
-
-Mrs. Kulkarni       DS          3          3        ✓ Complete
-Mr. Joshi           CN          2          2        ✓ Complete
-```
+![Faculty Summary 1](assets/faculty-summary-1.png)
+![Faculty Summary 2](assets/faculty-summary-2.png)
 
 ---
 
