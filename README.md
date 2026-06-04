@@ -157,6 +157,37 @@ Example:
 
 ---
 
+## System Architecture
+
+```text
+Input JSON
+     │
+     ▼
+Input Loader
+     │
+     ▼
+Subject & Faculty Models
+     │
+     ▼
+Session Expansion
+     │
+     ▼
+Backtracking Engine
+     │
+     ▼
+Forward Checking
+     │
+     ▼
+Constraint Validation
+     │
+     ▼
+Timetable Generation
+     │
+     ▼
+Faculty Summary
+```
+---
+
 ## Complexity Analysis
 
 Let:
