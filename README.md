@@ -1,6 +1,6 @@
 # Smart Timetable Generator
 
-A constraint-based academic timetable scheduling system developed in Java using **Backtracking**, **Most Constrained Variable (MCV) Heuristic**, and **Forward Checking**.
+A constraint-based academic timetable scheduling engine developed in Java using **Backtracking**, **Most Constrained Variable (MCV) Heuristic**, and **Forward Checking**.
 
 The system automatically generates optimized weekly timetables while satisfying faculty workload requirements, subject constraints, laboratory scheduling rules, and shared resource limitations.
 
@@ -17,7 +17,7 @@ Creating academic timetables manually is time-consuming and error-prone due to m
 - Avoiding timetable conflicts
 - Efficient utilization of available time slots
 
-This project automates the scheduling process using constraint satisfaction techniques and search-based optimization.
+This project automates the scheduling process using constraint satisfaction techniques and search-based optimization. The timetable generation process is modeled as a Constraint Satisfaction Problem (CSP), where subjects, faculty, time slots, and laboratory resources must satisfy a set of hard and soft constraints.
 
 ---
 
@@ -75,6 +75,18 @@ Days with lower current occupancy are prioritized to achieve a more balanced tim
 ### 5. Lab Distribution Heuristic
 
 Laboratory sessions are spread across the week to avoid clustering.
+
+---
+
+## Why This Is a CSP
+
+The timetable generation problem is modeled as a Constraint Satisfaction Problem (CSP), where:
+
+- Variables → Timetable sessions
+- Domains → Available time slots
+- Constraints → Faculty workload, laboratory availability, subject distribution, and break periods
+
+The scheduler uses Backtracking, Most Constrained Variable (MCV), and Forward Checking to efficiently explore and prune the search space.
 
 ---
 
@@ -221,8 +233,9 @@ To reduce practical runtime:
 - Java
 - JSON (org.json)
 - Backtracking Algorithms
-- Constraint Satisfaction Techniques
+- Constraint Satisfaction Techniques (CSP)
 - Heuristic Search
+- Scheduling Optimization
 
 ---
 
