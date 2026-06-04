@@ -216,17 +216,6 @@ To reduce practical runtime:
 
 ---
 
-## Future Enhancements
-
-- Faculty conflict handling across divisions
-- Classroom allocation and room capacities
-- Graph-coloring based scheduling model
-- Timetable quality metrics
-- PDF/Excel timetable export
-- Interactive GUI using JavaFX
-
----
-
 ## Technologies Used
 
 - Java
@@ -267,6 +256,17 @@ To reduce practical runtime:
 - Load-balanced scheduling
 - Compact timetable generation
 - Faculty schedule summary
+
+---
+
+## Future Enhancements
+
+- Faculty conflict handling across divisions
+- Classroom allocation and room capacities
+- Graph-coloring based scheduling model
+- Timetable quality metrics
+- PDF/Excel timetable export
+- Interactive GUI using JavaFX
 
 ---
 
