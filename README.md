@@ -248,6 +248,28 @@ To reduce practical runtime:
 
 ---
 
+## Version History
+
+### v1.0
+- Basic timetable generation
+- JSON input parsing
+- Subject and faculty allocation
+
+### v2.0
+- Recursive backtracking scheduler
+- Multi-division support
+- Faculty workload tracking
+
+### v3.0
+- Most Constrained Variable (MCV) heuristic
+- Forward checking
+- Shared lab resource management
+- Load-balanced scheduling
+- Compact timetable generation
+- Faculty schedule summary
+
+---
+
 ## Achievement
 
 Developed as part of a Loop-CCOEW's Buffer 6.0 - DSA Project Competition in the Next-Gen Academic Solutions domain and secured **3rd Place**.
