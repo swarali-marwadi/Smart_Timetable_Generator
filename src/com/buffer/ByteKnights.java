@@ -1,22 +1,36 @@
-// ============================================================
-//  ByteKnights — Multi-Division Timetable Scheduler
+// ByteKnights — Multi-Division Timetable Scheduler v3.1
 //
-//  Features:
-//  - Backtracking
-//  - MCV Heuristic
-//  - Forward Checking
-//  - Shared Lab Resource Constraints
-//  - Compact Timetable Generation
-//  - Load Balanced Scheduling
+// Core Techniques:
+// - Backtracking Search
+// - Most Constrained Variable (MCV) Heuristic
+// - Forward Checking
+// - Load-Balanced Day Selection
+// - Compact Slot Placement
+// - Shared Lab Resource Tracking
+// - Global Faculty Availability Tracking
 //
-//  Algorithm  : Backtracking + MCV heuristic + Forward Checking
-//  Constraints per placement:
-//    ① slot is not the break slot
-//    ② slot is free in this division's grid
-//    ③ subject not already on this day in this division
-//    ④ faculty quota not exhausted
-//    + Lab (P): ①②③④ hold for BOTH slot s and s+1
-// ============================================================
+// Hard Constraints:
+// ① Slot cannot be the break slot
+// ② Slot must be free in the division timetable
+// ③ Subject cannot repeat on the same day
+// ④ Faculty workload quota must not be exceeded
+// ⑤ Laboratory sessions require two consecutive slots
+// ⑥ Shared laboratory resources cannot be double-booked
+// ⑦ A faculty member cannot be scheduled in multiple divisions simultaneously
+//
+// Soft Heuristics:
+// - Prefer less-loaded days
+// - Prefer compact timetables
+// - Distribute laboratory sessions across the week
+//
+// Global Resource Constraints:
+// - Shared laboratory occupancy across divisions
+// - Shared faculty availability across divisions
+//
+// Forward Checking:
+// After every placement, verify that all remaining sessions
+// still have at least one valid placement opportunity.
+// Invalid branches are pruned immediately.
 
 package com.buffer;
 
@@ -127,13 +141,17 @@ class DivisionScheduler {
     // Same map instance shared by every DivisionScheduler so Div E
     // cannot book DSL in the same slot Div D already occupies.
     private final Map<String, Set<String>> labRoomOccupancy;
+    // facultyName → Set<"day-slot"> occupied across ALL divisions
+    private final Map<String, Set<String>> facultyOccupancy;
 
     DivisionScheduler(String division,
                       Map<String, Subject> subjects,
                       List<Faculty> allFaculty,
-                      Map<String, Set<String>> labRoomOccupancy) {
+                      Map<String, Set<String>> labRoomOccupancy,
+                      Map<String, Set<String>> facultyOccupancy) {
         this.division       = division;
         this.labRoomOccupancy = labRoomOccupancy;
+        this.facultyOccupancy = facultyOccupancy;
 
         // Collect faculty relevant to this division
         for (Faculty f : allFaculty)
@@ -346,6 +364,11 @@ class DivisionScheduler {
         if (s == BREAK) return false;
         if (occupied[d][s]) return false;
         if (!f.canSchedule()) return false;
+
+        // Cross-division faculty conflict
+        if (!facultyAvailable(f.name, d, s))
+            return false;
+
         return true;
     }
 
@@ -354,6 +377,10 @@ class DivisionScheduler {
         if (s + 1 >= SLOTS) return false;
         if (occupied[d][s] || occupied[d][s+1]) return false;
         if (!f.canSchedule(2)) return false;
+        if (!facultyAvailable(f.name, d, s))
+            return false;
+        if (!facultyAvailable(f.name, d, s + 1))
+            return false;
         // ── Constraint 1: lab room conflict check ──
         // Check if this subject's physical lab is already in use by
         // another division in these two slots.
@@ -371,15 +398,36 @@ class DivisionScheduler {
         grid[d][s] = subjectNames.getOrDefault(code, code);
         occupied[d][s] = true;
         f.schedule();
+
+        facultyOccupancy
+                .computeIfAbsent(f.name, k -> new HashSet<>())
+                .add(d + "-" + s);
     }
     private void undo(Faculty f, int d, int s) {
-        grid[d][s] = null; occupied[d][s] = false; f.unschedule();
+        grid[d][s] = null;
+        occupied[d][s] = false;
+        f.unschedule();
+
+        Set<String> booked = facultyOccupancy.get(f.name);
+
+        if (booked != null) {
+            booked.remove(d + "-" + s);
+
+            if (booked.isEmpty())
+                facultyOccupancy.remove(f.name);
+        }
     }
     private void placeLab(Faculty f, int d, int s, String code) {
         String lbl = subjectNames.get(code) != null ? subjectNames.get(code) : code;
         grid[d][s] = lbl; grid[d][s+1] = lbl;
         occupied[d][s] = true; occupied[d][s+1] = true;
         f.schedule(); f.schedule();
+        facultyOccupancy
+                .computeIfAbsent(f.name, k -> new HashSet<>())
+                .add(d + "-" + s);
+        facultyOccupancy
+                .get(f.name)
+                .add(d + "-" + (s + 1));
         // Mark lab room as occupied for both slots (shared across divisions)
         labRoomOccupancy.computeIfAbsent(f.subject, k -> new HashSet<>())
                 .add(d + "-" + s);
@@ -387,14 +435,33 @@ class DivisionScheduler {
                 .add(d + "-" + (s + 1));
     }
     private void undoLab(Faculty f, int d, int s) {
-        grid[d][s] = null; grid[d][s+1] = null;
-        occupied[d][s] = false; occupied[d][s+1] = false;
-        f.unschedule(); f.unschedule();
-        // Release lab room slots (backtrack)
+        grid[d][s] = null;
+        grid[d][s+1] = null;
+
+        occupied[d][s] = false;
+        occupied[d][s+1] = false;
+
+        f.unschedule();
+        f.unschedule();
+
+        Set<String> booked = facultyOccupancy.get(f.name);
+
+        if (booked != null) {
+            booked.remove(d + "-" + s);
+            booked.remove(d + "-" + (s + 1));
+
+            if (booked.isEmpty())
+                facultyOccupancy.remove(f.name);
+        }
+
         Set<String> roomBooked = labRoomOccupancy.get(f.subject);
+
         if (roomBooked != null) {
             roomBooked.remove(d + "-" + s);
             roomBooked.remove(d + "-" + (s + 1));
+
+            if (roomBooked.isEmpty())
+                labRoomOccupancy.remove(f.subject);
         }
     }
 
@@ -420,6 +487,18 @@ class DivisionScheduler {
             for (int s = 0; s < SLOTS; s++)
                 if (grid[d][s] == null) grid[d][s] = "-";
     }
+
+    private boolean facultyAvailable(String facultyName,
+                                     int day,
+                                     int slot) {
+
+        Set<String> booked =
+                facultyOccupancy.get(facultyName);
+
+        return booked == null ||
+                !booked.contains(day + "-" + slot);
+    }
+
 
     // ── Display ───────────────────────────────────────────────
 
@@ -498,12 +577,19 @@ public class ByteKnights {
         // Schedule each division independently
         // Constraint 1: one shared lab room map across all divisions
         Map<String, Set<String>> labRoomOccupancy = new HashMap<>();
+        Map<String, Set<String>> facultyOccupancy = new HashMap<>();
 
         boolean allOk = true;
         List<DivisionScheduler> schedulers = new ArrayList<>();
         for (String div : divisions) {
             System.out.println("\nScheduling Division " + div + "...");
-            DivisionScheduler ds = new DivisionScheduler(div, subjects, faculty, labRoomOccupancy);
+            DivisionScheduler ds =
+                    new DivisionScheduler(
+                            div,
+                            subjects,
+                            faculty,
+                            labRoomOccupancy,
+                            facultyOccupancy);
             if (!ds.schedule()) {
                 System.err.println("  FAILED: No valid timetable for Division " + div);
                 allOk = false;

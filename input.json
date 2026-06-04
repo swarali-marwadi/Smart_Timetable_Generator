@@ -21,7 +21,7 @@
   ],
   "faculty": [
     { "name": "Mrs. Kulkarni", "subject": "23PCIT301",  "division": "D" },
-    { "name": "Mr. Sharma",    "subject": "23PCIT301",  "division": "E" },
+    { "name": "Mrs. Kulkarni",    "subject": "23PCIT301",  "division": "E" },
 
     { "name": "Mr. Joshi",     "subject": "23PCIT302",  "division": "D" },
     { "name": "Mrs. Mehta",    "subject": "23PCIT302",  "division": "E" },
@@ -42,7 +42,7 @@
     { "name": "Mr. Khan",      "subject": "23AEC301",   "division": "E" },
 
     { "name": "Mrs. Kulkarni", "subject": "23PCIT301L", "division": "D" },
-    { "name": "Mr. Sharma",    "subject": "23PCIT301L", "division": "E" },
+    { "name": "Mrs. Kulkarni",    "subject": "23PCIT301L", "division": "E" },
 
     { "name": "Mr. Joshi",     "subject": "23PCIT302L", "division": "D" },
     { "name": "Mrs. Mehta",    "subject": "23PCIT302L", "division": "E" },
