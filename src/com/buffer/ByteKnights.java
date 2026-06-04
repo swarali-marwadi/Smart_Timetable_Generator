@@ -441,16 +441,17 @@ class DivisionScheduler {
 
     public void display() {
         System.out.println("\n╔══ Division " + division + " — Timetable ══╗");
-        System.out.printf("%-10s", "");
+        //System.out.printf("%-10s", "");
+        System.out.print("         ");
         for (String t : TIME) System.out.printf("%-18s", t);
         System.out.println();
-        System.out.println("─".repeat(164));
+        System.out.println("─".repeat(130));
         for (int d = 0; d < DAYS; d++) {
             System.out.printf("%-10s", DAY_LABEL[d]);
             for (int s = 0; s < SLOTS; s++) System.out.printf("%-18s", grid[d][s]);
             System.out.println();
         }
-        System.out.println("═".repeat(164));
+        System.out.println("═".repeat(130));
     }
 
     public void displayFacultySummary() {
