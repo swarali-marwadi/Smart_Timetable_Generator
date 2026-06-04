@@ -1,22 +1,13 @@
 // ============================================================
-//  ByteKnights — Multi-Division Timetable Scheduler  v2.2
+//  ByteKnights — Multi-Division Timetable Scheduler
 //
-//  Fix in v2.2:
-//    Replaced interleaved backtracking (caused exponential blowup)
-//    with sequential per-division scheduling + forward checking.
-//
-//    WHY sequential is correct now:
-//      Each faculty teaches exactly one subject to one division.
-//      Division D and Division E share NO faculty, so they are
-//      completely independent scheduling problems. No interleaving
-//      needed — solve D, then solve E separately.
-//
-//    WHY forward checking is needed:
-//      After placing a session, check that every remaining
-//      unplaced session still has at least one valid (day, slot).
-//      If any session has 0 valid slots remaining, prune NOW
-//      instead of discovering the dead end 10 placements later.
-//      This cuts the search tree dramatically.
+//  Features:
+//  - Backtracking
+//  - MCV Heuristic
+//  - Forward Checking
+//  - Shared Lab Resource Constraints
+//  - Compact Timetable Generation
+//  - Load Balanced Scheduling
 //
 //  Algorithm  : Backtracking + MCV heuristic + Forward Checking
 //  Constraints per placement:
@@ -137,15 +128,12 @@ class DivisionScheduler {
     // cannot book DSL in the same slot Div D already occupies.
     private final Map<String, Set<String>> labRoomOccupancy;
 
-    private final Map<String, Subject> subjects;
-
     DivisionScheduler(String division,
                       Map<String, Subject> subjects,
                       List<Faculty> allFaculty,
                       Map<String, Set<String>> labRoomOccupancy) {
         this.division       = division;
         this.labRoomOccupancy = labRoomOccupancy;
-        this.subjects = subjects;
 
         // Collect faculty relevant to this division
         for (Faculty f : allFaculty)
@@ -232,11 +220,6 @@ class DivisionScheduler {
         return false;
     }
 
-    /**
-     * Returns day indices [0..DAYS-1] sorted by current session load ascending.
-     * Ties broken by day index so ordering is deterministic.
-     * Called once per backtrack node — O(DAYS log DAYS), negligible.
-     */
     /**
      * Returns day indices sorted by effective load ascending — least loaded first.
      *
@@ -385,7 +368,7 @@ class DivisionScheduler {
     // ── Place / undo ──────────────────────────────────────────
 
     private void place(Faculty f, int d, int s, String code) {
-        grid[d][s] = subjectNames.get(code);
+        grid[d][s] = subjectNames.getOrDefault(code, code);
         occupied[d][s] = true;
         f.schedule();
     }
@@ -416,12 +399,13 @@ class DivisionScheduler {
     }
 
     // ── Helpers ───────────────────────────────────────────────
-
-    private Subject subjectCache;  // minor cache to avoid repeated map scan
     private Subject getSubject(String code) {
-        // Walk agenda to find subject — agenda is small (≤10 entries)
-        for (Subject s : agenda) if (s.code.equals(code)) return s;
-        return null;
+        for (Subject s : agenda)
+            if (s.code.equals(code))
+                return s;
+
+        throw new IllegalStateException(
+                "Unknown subject code encountered during scheduling: " + code);
     }
 
     private boolean subjectOnDay(String code, int day) {
@@ -461,9 +445,7 @@ class DivisionScheduler {
         System.out.println("    " + "─".repeat(58));
         for (Faculty f : facultyMap.values()) {
             String st = f.scheduledClasses == f.totalClasses ? "✓ Complete" : "✗ Partial";
-            String subjectName = subjects.containsKey(f.subject)
-                    ? subjects.get(f.subject).name
-                    : f.subject;
+            String subjectName = subjectNames.getOrDefault(f.subject, f.subject);
 
             System.out.printf("    %-20s %-14s %-9d %-9d %s%n",
                     f.name,
