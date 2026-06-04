@@ -1,0 +1,53 @@
+{
+  "classroom": "25",
+  "divisions": ["D", "E"],
+  "rooms": [
+    { "name": "Room 25", "type": "CLASSROOM" },
+    { "name": "Room 26", "type": "CLASSROOM" },
+    { "name": "Lab 101", "type": "LAB" },
+    { "name": "Lab 102", "type": "LAB" }
+  ],
+  "subjects": [
+    { "code": "23PCIT301",  "name": "DS",    "sessionType": "L", "creditsPerWeek": 3 },
+    { "code": "23PCIT302",  "name": "CN",    "sessionType": "L", "creditsPerWeek": 2 },
+    { "code": "23PCIT303",  "name": "DECA",  "sessionType": "L", "creditsPerWeek": 3 },
+    { "code": "23PCIT304",  "name": "DM",    "sessionType": "L", "creditsPerWeek": 2 },
+    { "code": "23OE301",    "name": "OE",    "sessionType": "L", "creditsPerWeek": 3 },
+    { "code": "23VEC301",   "name": "UHV",   "sessionType": "L", "creditsPerWeek": 2 },
+    { "code": "23AEC301",   "name": "DT",    "sessionType": "L", "creditsPerWeek": 1 },
+    { "code": "23PCIT301L", "name": "DS Lab",   "sessionType": "P", "creditsPerWeek": 2 },
+    { "code": "23PCIT302L", "name": "CN Lab",   "sessionType": "P", "creditsPerWeek": 1 },
+    { "code": "23PCIT303L", "name": "DECA Lab", "sessionType": "P", "creditsPerWeek": 1 }
+  ],
+  "faculty": [
+    { "name": "Mrs. Kulkarni", "subject": "23PCIT301",  "division": "D" },
+    { "name": "Mr. Sharma",    "subject": "23PCIT301",  "division": "E" },
+
+    { "name": "Mr. Joshi",     "subject": "23PCIT302",  "division": "D" },
+    { "name": "Mrs. Mehta",    "subject": "23PCIT302",  "division": "E" },
+
+    { "name": "Mrs. Desai",    "subject": "23PCIT303",  "division": "D" },
+    { "name": "Mr. Pawar",     "subject": "23PCIT303",  "division": "E" },
+
+    { "name": "Mr. Nair",      "subject": "23PCIT304",  "division": "D" },
+    { "name": "Mrs. Iyer",     "subject": "23PCIT304",  "division": "E" },
+
+    { "name": "Mrs. Reddy",    "subject": "23OE301",    "division": "D" },
+    { "name": "Mr. Patil",     "subject": "23OE301",    "division": "E" },
+
+    { "name": "Mr. Verma",     "subject": "23VEC301",   "division": "D" },
+    { "name": "Mrs. Singh",    "subject": "23VEC301",   "division": "E" },
+
+    { "name": "Mrs. Rao",      "subject": "23AEC301",   "division": "D" },
+    { "name": "Mr. Khan",      "subject": "23AEC301",   "division": "E" },
+
+    { "name": "Mrs. Kulkarni", "subject": "23PCIT301L", "division": "D" },
+    { "name": "Mr. Sharma",    "subject": "23PCIT301L", "division": "E" },
+
+    { "name": "Mr. Joshi",     "subject": "23PCIT302L", "division": "D" },
+    { "name": "Mrs. Mehta",    "subject": "23PCIT302L", "division": "E" },
+
+    { "name": "Mrs. Desai",    "subject": "23PCIT303L", "division": "D" },
+    { "name": "Mr. Pawar",     "subject": "23PCIT303L", "division": "E" }
+  ]
+}
