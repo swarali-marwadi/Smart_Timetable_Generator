@@ -43,6 +43,8 @@ This project automates the scheduling process using constraint satisfaction tech
 ### Shared Resource Management
 - Shared laboratory occupancy tracking.
 - Prevents simultaneous allocation of the same lab resource.
+- Global faculty availability tracking across divisions.
+- Prevents a faculty member from being scheduled in multiple divisions simultaneously.
 
 ### Faculty Tracking
 - Tracks required and scheduled teaching load.
@@ -90,6 +92,28 @@ The scheduler uses Backtracking, Most Constrained Variable (MCV), and Forward Ch
 
 ---
 
+## Resource Conflict Resolution
+
+The scheduler manages shared resources globally across all divisions to ensure conflict-free timetable generation.
+
+### Laboratory Conflict Resolution
+
+- Tracks laboratory occupancy across all divisions using a shared resource map.
+- Prevents the same laboratory resource from being allocated to multiple divisions during the same time slot.
+- Enforced dynamically during backtracking and forward checking.
+
+### Faculty Conflict Resolution
+
+- Maintains a global faculty availability map across all divisions.
+- Prevents a faculty member from being scheduled in multiple divisions simultaneously.
+- Automatically searches for alternative valid placements when conflicts occur.
+
+### Global Constraint Enforcement
+
+Both laboratory and faculty conflicts are treated as hard constraints and are validated during every scheduling decision. This ensures that all generated timetables are feasible across divisions while maintaining resource consistency throughout the scheduling process.
+
+---
+
 ## Scheduling Constraints
 
 ### Hard Constraints
@@ -99,6 +123,7 @@ The scheduler uses Backtracking, Most Constrained Variable (MCV), and Forward Ch
 - A subject cannot be scheduled more than once on the same day.
 - Laboratory sessions must occupy two consecutive slots.
 - Shared laboratory resources cannot be double-booked.
+- A faculty member cannot be scheduled in multiple divisions simultaneously.
 
 ### Soft Constraints
 
@@ -184,20 +209,23 @@ Subject & Faculty Models
 Session Expansion
      │
      ▼
-Backtracking Engine
+Backtracking + MCV
      │
      ▼
 Forward Checking
      │
      ▼
-Constraint Validation
+Global Resource Validation
+     │
+     ├── Shared Lab Occupancy
+     │
+     └── Faculty Availability
      │
      ▼
 Timetable Generation
      │
      ▼
 Faculty Summary
-```
 ---
 
 ## Complexity Analysis
@@ -270,11 +298,15 @@ To reduce practical runtime:
 - Compact timetable generation
 - Faculty schedule summary
 
+### v3.1
+- Cross-division faculty conflict detection
+- Global faculty availability tracking
+- Enhanced resource constraint handling
+
 ---
 
 ## Future Enhancements
 
-- Faculty conflict handling across divisions
 - Classroom allocation and room capacities
 - Graph-coloring based scheduling model
 - Timetable quality metrics
