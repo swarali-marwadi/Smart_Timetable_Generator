@@ -38,17 +38,26 @@ This project automates the scheduling process using constraint satisfaction tech
 - Most Constrained Variable (MCV) heuristic.
 - Forward checking for early dead-end detection.
 - Load-balanced day selection.
-- Compact timetable generation.
+- Compact slot placement.
+- Laboratory distribution heuristic.
 
-### Shared Resource Management
+### Shared Resource & Room Management
 - Shared laboratory occupancy tracking.
-- Prevents simultaneous allocation of the same lab resource.
+- Classroom and laboratory allocation during scheduling.
+- Prevents simultaneous allocation of the same room.
 - Global faculty availability tracking across divisions.
 - Prevents a faculty member from being scheduled in multiple divisions simultaneously.
+- Generates room-wise allocation alongside the timetable.
 
 ### Faculty Tracking
 - Tracks required and scheduled teaching load.
 - Generates faculty-wise scheduling summary.
+
+### Room Allocation
+- Automatically assigns classrooms and laboratories.
+- Supports multiple classrooms and shared labs.
+- Prevents room conflicts across divisions.
+- Ensures laboratory sessions are assigned only to lab rooms.
 
 ---
 
@@ -92,15 +101,43 @@ The scheduler uses Backtracking, Most Constrained Variable (MCV), and Forward Ch
 
 ---
 
+## Scheduling Strategy
+
+The timetable generator combines Constraint Satisfaction Problem (CSP) techniques with scheduling heuristics to produce balanced and conflict-free timetables while efficiently utilizing available resources.
+
+### Session Placement Strategy
+
+- Subjects are expanded into individual weekly sessions based on their required credits.
+- Sessions are scheduled incrementally using recursive backtracking.
+- Each placement is validated against all hard constraints before being accepted.
+- Forward checking is performed after every placement to eliminate infeasible branches early.
+
+### Resource Allocation Strategy
+
+- Classrooms and laboratories are allocated dynamically during scheduling.
+- Room occupancy is tracked globally across all divisions.
+- Laboratory sessions are restricted to laboratory rooms only.
+- Faculty availability is monitored globally to prevent cross-division scheduling conflicts.
+- Every scheduled session must be assigned a valid and available room.
+
+### Timetable Optimization Strategy
+
+- Least-loaded days are prioritized to achieve a balanced weekly workload distribution.
+- Sessions are placed in the next available slot to maintain timetable compactness and reduce idle gaps.
+- Laboratory sessions are distributed across the week whenever possible to avoid clustering.
+- Resource conflicts are resolved dynamically during the search process through backtracking and constraint validation.
+
+---
+
 ## Resource Conflict Resolution
 
 The scheduler manages shared resources globally across all divisions to ensure conflict-free timetable generation.
 
-### Laboratory Conflict Resolution
+### Room Conflict Resolution
 
-- Tracks laboratory occupancy across all divisions using a shared resource map.
-- Prevents the same laboratory resource from being allocated to multiple divisions during the same time slot.
-- Enforced dynamically during backtracking and forward checking.
+- Tracks occupancy of classrooms and laboratories across divisions.
+- Prevents a room from being allocated to multiple divisions simultaneously.
+- Dynamically searches for alternative available rooms when conflicts occur.
 
 ### Faculty Conflict Resolution
 
@@ -110,7 +147,7 @@ The scheduler manages shared resources globally across all divisions to ensure c
 
 ### Global Constraint Enforcement
 
-Both laboratory and faculty conflicts are treated as hard constraints and are validated during every scheduling decision. This ensures that all generated timetables are feasible across divisions while maintaining resource consistency throughout the scheduling process.
+Both room and faculty conflicts are treated as hard constraints and are validated during every scheduling decision.
 
 ---
 
@@ -119,11 +156,14 @@ Both laboratory and faculty conflicts are treated as hard constraints and are va
 ### Hard Constraints
 
 - Break slot cannot be used.
-- Faculty workload must not exceed assigned quota.
+- Slot must be free in the division timetable.
 - A subject cannot be scheduled more than once on the same day.
+- Faculty workload must not exceed assigned quota.
 - Laboratory sessions must occupy two consecutive slots.
-- Shared laboratory resources cannot be double-booked.
+- Shared room resources cannot be double-booked.
 - A faculty member cannot be scheduled in multiple divisions simultaneously.
+- Laboratories can only be assigned to laboratory rooms.
+- Every scheduled session must receive a valid room allocation.
 
 ### Soft Constraints
 
@@ -183,9 +223,9 @@ Example:
 
 ## Sample Output
 
-### Generated Timetable
+### Timetable + Room Allocation
 
-![Timetable](assets/timetable-output.png)
+![Combined Timetable](assets/timetable-room-allocation.png)
 
 ### Faculty Summary
 
@@ -217,31 +257,31 @@ Forward Checking
      ▼
 Global Resource Validation
      │
-     ├── Shared Lab Occupancy
+     ├── Room Availability
      │
      └── Faculty Availability
+     │
+     ▼
+Room Allocation
      │
      ▼
 Timetable Generation
      │
      ▼
 Faculty Summary
+```
 ---
 
 ## Complexity Analysis
 
 Let:
-
 - S = Number of sessions
 - D = Number of days
 - T = Number of available slots per day
 
 ### Worst Case
 
-```text
 O((D × T)^S)
-```
-
 The scheduling problem is a Constraint Satisfaction Problem (CSP) and is NP-hard in the general case.
 
 ### Optimizations Used
@@ -264,6 +304,8 @@ To reduce practical runtime:
 - Constraint Satisfaction Techniques (CSP)
 - Heuristic Search
 - Scheduling Optimization
+- Resource Allocation
+- Constraint Propagation
 
 ---
 
@@ -303,14 +345,23 @@ To reduce practical runtime:
 - Global faculty availability tracking
 - Enhanced resource constraint handling
 
+### v3.2
+- Dynamic room allocation system
+- Classroom and laboratory conflict detection
+- Shared room occupancy tracking
+- Combined timetable and room allocation display
+- Laboratory distribution heuristic
+- Compact slot placement heuristic
+
 ---
 
 ## Future Enhancements
 
-- Classroom allocation and room capacities
+- Room capacity constraints
+- Faculty preference-based scheduling
 - Graph-coloring based scheduling model
-- Timetable quality metrics
-- PDF/Excel timetable export
+- Timetable quality scoring metrics
+- PDF/Excel export
 - Interactive GUI using JavaFX
 
 ---
