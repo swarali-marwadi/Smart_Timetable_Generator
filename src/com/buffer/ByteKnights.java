@@ -1,36 +1,34 @@
 // ByteKnights — Multi-Division Timetable Scheduler v3.1
 //
-// Core Techniques:
-// - Backtracking Search
-// - Most Constrained Variable (MCV) Heuristic
-// - Forward Checking
-// - Load-Balanced Day Selection
-// - Compact Slot Placement
-// - Shared Lab Resource Tracking
-// - Global Faculty Availability Tracking
-//
-// Hard Constraints:
-// ① Slot cannot be the break slot
-// ② Slot must be free in the division timetable
-// ③ Subject cannot repeat on the same day
-// ④ Faculty workload quota must not be exceeded
-// ⑤ Laboratory sessions require two consecutive slots
-// ⑥ Shared laboratory resources cannot be double-booked
-// ⑦ A faculty member cannot be scheduled in multiple divisions simultaneously
-//
-// Soft Heuristics:
-// - Prefer less-loaded days
-// - Prefer compact timetables
-// - Distribute laboratory sessions across the week
-//
-// Global Resource Constraints:
-// - Shared laboratory occupancy across divisions
-// - Shared faculty availability across divisions
-//
-// Forward Checking:
-// After every placement, verify that all remaining sessions
-// still have at least one valid placement opportunity.
-// Invalid branches are pruned immediately.
+/*
+ * Smart Timetable Generator
+ * ------------------------------------------------------------
+ * Generates conflict-free academic timetables for multiple
+ * divisions using Constraint Satisfaction Problem (CSP)
+ * techniques.
+ *
+ * Algorithms Used:
+ *  - Backtracking Search
+ *  - Most Constrained Variable (MCV) Heuristic
+ *  - Forward Checking
+ *  - Load Balanced Day Selection
+ *  - Compact Slot Placement
+ *
+ * Constraints Handled:
+ *  - Faculty availability
+ *  - Room availability
+ *  - Laboratory allocation
+ *  - Subject repetition control
+ *  - Break slot enforcement
+ *  - Cross-division faculty conflicts
+ *
+ * Features:
+ *  - Multi-division scheduling
+ *  - Shared resource tracking
+ *  - Automatic room allocation
+ *  - Faculty workload management
+ *  - Balanced timetable generation
+ */
 
 package com.buffer;
 
@@ -39,6 +37,7 @@ import org.json.JSONObject;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import org.json.JSONArray;
 import java.util.*;
 
 // ── Enums ─────────────────────────────────────────────────────
@@ -72,6 +71,21 @@ class Faculty {
     boolean canSchedule(int n)     { return scheduledClasses + n <= totalClasses; }
     void    schedule()             { scheduledClasses++; }
     void    unschedule()           { if (scheduledClasses > 0) scheduledClasses--; }
+}
+
+class Room {
+
+    String name;
+    String type; // CLASSROOM or LAB
+
+    Room(String name, String type) {
+        this.name = name;
+        this.type = type;
+    }
+
+    boolean isLab() {
+        return "LAB".equals(type);
+    }
 }
 
 // ── Input loader ──────────────────────────────────────────────
@@ -109,6 +123,23 @@ class InputLoader {
         }
         return list;
     }
+
+    static List<Room> parseRooms(JSONObject root) {
+        List<Room> rooms = new ArrayList<>();
+
+        JSONArray arr = root.getJSONArray("rooms");
+
+        for (Object o : arr) {
+            JSONObject r = (JSONObject) o;
+
+            rooms.add(new Room(
+                    r.getString("name"),
+                    r.getString("type")
+            ));
+        }
+
+        return rooms;
+    }
 }
 
 // ── Division scheduler ────────────────────────────────────────
@@ -127,6 +158,7 @@ class DivisionScheduler {
     private final String      division;
     private final String[][]  grid     = new String[DAYS][SLOTS];
     private final boolean[][] occupied = new boolean[DAYS][SLOTS];
+    private final String[][] roomGrid = new String[DAYS][SLOTS];
 
     // subject code → Faculty for this division
     private final Map<String, Faculty> facultyMap = new HashMap<>();
@@ -140,18 +172,23 @@ class DivisionScheduler {
     // subjectCode → Set<"day-slot"> booked across ALL divisions.
     // Same map instance shared by every DivisionScheduler so Div E
     // cannot book DSL in the same slot Div D already occupies.
-    private final Map<String, Set<String>> labRoomOccupancy;
     // facultyName → Set<"day-slot"> occupied across ALL divisions
     private final Map<String, Set<String>> facultyOccupancy;
+
+    private final List<Room> rooms;
+
+    private final Map<String, Set<String>> roomOccupancy;
 
     DivisionScheduler(String division,
                       Map<String, Subject> subjects,
                       List<Faculty> allFaculty,
-                      Map<String, Set<String>> labRoomOccupancy,
-                      Map<String, Set<String>> facultyOccupancy) {
-        this.division       = division;
-        this.labRoomOccupancy = labRoomOccupancy;
+                      List<Room> rooms,
+                      Map<String, Set<String>> facultyOccupancy,
+                      Map<String, Set<String>> roomOccupancy) {
+        this.division = division;
         this.facultyOccupancy = facultyOccupancy;
+        this.rooms = rooms;
+        this.roomOccupancy = roomOccupancy;
 
         // Collect faculty relevant to this division
         for (Faculty f : allFaculty)
@@ -226,9 +263,9 @@ class DivisionScheduler {
                 // ── Compactness: lectures/tutorials fill the next free slot ──
                 int nextSlot = nextFreeSlot(d);
                 if (nextSlot == -1) continue;
-                if (!canPlace(faculty, d, nextSlot)) continue;
+                if (!canPlace(faculty, subject, d, nextSlot)) continue;
 
-                place(faculty, d, nextSlot, code);
+                place(faculty, subject, d, nextSlot, code);
                 if (forwardCheck(sessions, index + 1)) {
                     if (backtrack(sessions, index + 1)) return true;
                 }
@@ -329,10 +366,34 @@ class DivisionScheduler {
                 if (nextSlot == BREAK || nextSlot + 1 == BREAK) continue;
                 if (canPlaceLab(faculty, d, nextSlot)) count++;
             } else {
-                if (canPlace(faculty, d, nextSlot)) count++;
+                if (canPlace(faculty, subject, d, nextSlot)) count++;
             }
         }
         return count;
+    }
+
+    private Room findRoom(Subject subject, int d, int s) {
+
+        boolean lab = subject.sessionType == SessionType.P;
+
+        for (Room room : rooms) {
+
+            if (lab && !room.isLab())
+                continue;
+
+            if (!lab && room.isLab())
+                continue;
+
+            if (!roomAvailable(room, d, s))
+                continue;
+
+            if (lab && !roomAvailable(room, d, s + 1))
+                continue;
+
+            return room;
+        }
+
+        return null;
     }
 
     // ── Compactness helper ───────────────────────────────────
@@ -360,13 +421,18 @@ class DivisionScheduler {
 
     // ── Constraint checks ─────────────────────────────────────
 
-    private boolean canPlace(Faculty f, int d, int s) {
+    private boolean canPlace(Faculty f, Subject subject, int d, int s) {
         if (s == BREAK) return false;
         if (occupied[d][s]) return false;
         if (!f.canSchedule()) return false;
 
         // Cross-division faculty conflict
         if (!facultyAvailable(f.name, d, s))
+            return false;
+
+        Room room = findRoom(subject, d, s);
+
+        if (room == null)
             return false;
 
         return true;
@@ -384,29 +450,67 @@ class DivisionScheduler {
         // ── Constraint 1: lab room conflict check ──
         // Check if this subject's physical lab is already in use by
         // another division in these two slots.
-        Set<String> roomBooked = labRoomOccupancy.get(f.subject);
-        if (roomBooked != null) {
-            if (roomBooked.contains(d + "-" + s) ||
-                    roomBooked.contains(d + "-" + (s + 1))) return false;
-        }
+
+        Subject subject = getSubject(f.subject);
+
+        Room room = findRoom(subject, d, s);
+
+        if (room == null)
+            return false;
+
         return true;
     }
 
     // ── Place / undo ──────────────────────────────────────────
 
-    private void place(Faculty f, int d, int s, String code) {
+    private void place(Faculty f, Subject subject, int d, int s, String code) {
+
+        Room room = findRoom(subject, d, s);
+
+        if (room == null)
+            throw new IllegalStateException(
+                    "No room available");
+
         grid[d][s] = subjectNames.getOrDefault(code, code);
+
+        roomGrid[d][s] = room.name;
+
+        roomOccupancy
+                .computeIfAbsent(room.name, k -> new HashSet<>())
+                .add(d + "-" + s);
+
         occupied[d][s] = true;
+
         f.schedule();
 
         facultyOccupancy
                 .computeIfAbsent(f.name, k -> new HashSet<>())
                 .add(d + "-" + s);
     }
+
     private void undo(Faculty f, int d, int s) {
         grid[d][s] = null;
         occupied[d][s] = false;
         f.unschedule();
+
+        String roomName =
+                roomGrid[d][s];
+
+        roomGrid[d][s] = null;
+
+        if (roomName != null) {
+
+            Set<String> booked =
+                    roomOccupancy.get(roomName);
+
+            if (booked != null) {
+
+                booked.remove(d + "-" + s);
+
+                if (booked.isEmpty())
+                    roomOccupancy.remove(roomName);
+            }
+        }
 
         Set<String> booked = facultyOccupancy.get(f.name);
 
@@ -418,8 +522,13 @@ class DivisionScheduler {
         }
     }
     private void placeLab(Faculty f, int d, int s, String code) {
+        Subject subject = getSubject(code);
+        Room room = findRoom(subject, d, s);
         String lbl = subjectNames.get(code) != null ? subjectNames.get(code) : code;
-        grid[d][s] = lbl; grid[d][s+1] = lbl;
+        grid[d][s] = lbl;
+        grid[d][s+1] = lbl;
+        roomGrid[d][s] = room.name;
+        roomGrid[d][s+1] = room.name;
         occupied[d][s] = true; occupied[d][s+1] = true;
         f.schedule(); f.schedule();
         facultyOccupancy
@@ -428,11 +537,15 @@ class DivisionScheduler {
         facultyOccupancy
                 .get(f.name)
                 .add(d + "-" + (s + 1));
-        // Mark lab room as occupied for both slots (shared across divisions)
-        labRoomOccupancy.computeIfAbsent(f.subject, k -> new HashSet<>())
+
+        roomOccupancy
+                .computeIfAbsent(room.name, k -> new HashSet<>())
                 .add(d + "-" + s);
-        labRoomOccupancy.computeIfAbsent(f.subject, k -> new HashSet<>())
+
+        roomOccupancy
+                .get(room.name)
                 .add(d + "-" + (s + 1));
+
     }
     private void undoLab(Faculty f, int d, int s) {
         grid[d][s] = null;
@@ -454,14 +567,23 @@ class DivisionScheduler {
                 facultyOccupancy.remove(f.name);
         }
 
-        Set<String> roomBooked = labRoomOccupancy.get(f.subject);
+        String roomName = roomGrid[d][s];
 
-        if (roomBooked != null) {
-            roomBooked.remove(d + "-" + s);
-            roomBooked.remove(d + "-" + (s + 1));
+        roomGrid[d][s] = null;
+        roomGrid[d][s+1] = null;
 
-            if (roomBooked.isEmpty())
-                labRoomOccupancy.remove(f.subject);
+        if (roomName != null) {
+
+            booked = roomOccupancy.get(roomName);
+
+            if (booked != null) {
+
+                booked.remove(d + "-" + s);
+                booked.remove(d + "-" + (s + 1));
+
+                if (booked.isEmpty())
+                    roomOccupancy.remove(roomName);
+            }
         }
     }
 
@@ -488,10 +610,7 @@ class DivisionScheduler {
                 if (grid[d][s] == null) grid[d][s] = "-";
     }
 
-    private boolean facultyAvailable(String facultyName,
-                                     int day,
-                                     int slot) {
-
+    private boolean facultyAvailable(String facultyName, int day, int slot) {
         Set<String> booked =
                 facultyOccupancy.get(facultyName);
 
@@ -499,22 +618,71 @@ class DivisionScheduler {
                 !booked.contains(day + "-" + slot);
     }
 
+    private boolean roomAvailable(Room room, int d, int s) {
+        Set<String> booked =
+                roomOccupancy.get(room.name);
+
+        return booked == null ||
+                !booked.contains(d + "-" + s);
+    }
 
     // ── Display ───────────────────────────────────────────────
 
-    public void display() {
-        System.out.println("\n╔══ Division " + division + " — Timetable ══╗");
-        //System.out.printf("%-10s", "");
-        System.out.print("         ");
-        for (String t : TIME) System.out.printf("%-18s", t);
+    public void displayCombined() {
+
+        System.out.println(
+                "\n╔════════════════════════════════════════Division " + division +
+                        " — Timetable + Room Allocation ════════════════════════════════════════╗\n");
+
+        System.out.printf("%-10s", "");
+
+        for (String t : TIME)
+            System.out.printf("%-15s", t);
+
         System.out.println();
-        System.out.println("─".repeat(130));
+
+        System.out.println("─".repeat(123));
+
         for (int d = 0; d < DAYS; d++) {
+
+            // Subject row
             System.out.printf("%-10s", DAY_LABEL[d]);
-            for (int s = 0; s < SLOTS; s++) System.out.printf("%-18s", grid[d][s]);
+
+            for (int s = 0; s < SLOTS; s++) {
+
+                String subject = grid[d][s];
+
+                System.out.printf(
+                        "%-15s",
+                        subject == null ? "-" : subject
+                );
+            }
+
+            System.out.println();
+
+            // Room row
+            System.out.printf("%-10s", "");
+
+            for (int s = 0; s < SLOTS; s++) {
+
+                String room = roomGrid[d][s];
+
+                if ("Break".equals(grid[d][s])) {
+                    System.out.printf("%-15s", "");
+                    continue;
+                }
+
+                System.out.printf(
+                        "%-15s",
+                        room == null ? "" : "[" + room + "]"
+                );
+            }
+
+            System.out.println();
             System.out.println();
         }
-        System.out.println("═".repeat(130));
+
+        System.out.println("═".repeat(123));
     }
 
     public void displayFacultySummary() {
@@ -576,8 +744,9 @@ public class ByteKnights {
 
         // Schedule each division independently
         // Constraint 1: one shared lab room map across all divisions
-        Map<String, Set<String>> labRoomOccupancy = new HashMap<>();
         Map<String, Set<String>> facultyOccupancy = new HashMap<>();
+        List<Room> rooms = InputLoader.parseRooms(root);
+        Map<String, Set<String>> roomOccupancy = new HashMap<>();
 
         boolean allOk = true;
         List<DivisionScheduler> schedulers = new ArrayList<>();
@@ -588,8 +757,10 @@ public class ByteKnights {
                             div,
                             subjects,
                             faculty,
-                            labRoomOccupancy,
-                            facultyOccupancy);
+                            rooms,
+                            facultyOccupancy,
+                            roomOccupancy
+                    );
             if (!ds.schedule()) {
                 System.err.println("  FAILED: No valid timetable for Division " + div);
                 allOk = false;
@@ -607,7 +778,9 @@ public class ByteKnights {
 
         System.out.println("\n✓ All divisions scheduled via backtracking + MCV + forward checking.");
 
-        for (DivisionScheduler ds : schedulers) ds.display();
+        for (DivisionScheduler ds : schedulers) {
+            ds.displayCombined();
+        }
 
         System.out.println("\n╔══ Faculty Schedule Summary ══╗");
         for (DivisionScheduler ds : schedulers) ds.displayFacultySummary();
