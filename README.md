@@ -199,7 +199,8 @@ Example:
 
 ### Timetable + Room Allocation
 
-![Combined Timetable](assets/timetable-room-allocation.png)
+![Combined Timetable 1](assets/timetable-output-1.png)
+![Combined Timetable 2](assets/timetable-output-2.png)
 
 ### Faculty Summary
 
